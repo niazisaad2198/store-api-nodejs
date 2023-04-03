@@ -49,24 +49,32 @@ const getAllProducts = async (req, res) => {
   const limit = Number(req.params.limit) || 10;
   const skip = (page - 1) * limit;
   results = results.skip(skip).limit(limit);
+
+  // numeric filters for filtering results based on numeric properties like price and rating.
+  if (numericFilters) {
+    const operatorMaps = {
+      ">": "$gt",
+      ">=": "$gte",
+      "=": "$eq",
+      "<": "$lt",
+      "<=": "$lte",
+    };
+    const regEx = /\b`${<|<=|=|>|>=}`\b/g;
+    let filters = numericFilters.replace(
+      regEx,
+      (match) => `-${operatorMaps[match]}-`
+    );
+
+    const options = [price, rating];
+    filters = filters.split(",").forEach((item) => {
+      const [field, operator, value] = item.split("-");
+      if (options.include(field))
+        queryObject[field] = { [operator]: Number(value) };
+    });
+  }
+
   res.status(200).json({ products: results, nbHits: products.length });
 };
-
-// numeric filters for filtering results based on numeric properties like price and rating.
-if (numericFilters) {
-  const operatorMaps = {
-    ">": "$gt",
-    ">=": "$gte",
-    "=": "$eq",
-    "<": "$lt",
-    "<=": "$lte",
-  };
-  const regEx = /\b`${<|<=|=|>|>=}`\b/g;
-  let filters = numericFilters.replace(
-    regEx,
-    (match) => `-${operatorMaps[match]}-`
-  );
-}
 
 module.exports = { getAllProducts, getAllProductsStatic };
 
